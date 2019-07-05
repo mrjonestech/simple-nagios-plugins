@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# Nagios check_container plugin by George Jones IV
+# This plugin will get the current state of a container specified on the command line.
+#
+# Prerequisites:
+#
+# You will need to install jq on the docker host that this will be used with. (apt install jq)
+# the nagios user will need to be added to the docker group with:
+# sudo usermod -aG docker nagios
+# once added to the group you'll need to restart nrpe unless the docker host is also the nagios server and you're not using nrpe.
+# usage: check_container <container name>
+# example: check_container mariadb1
+
+
+
+arg="$1"
+state=`curl -X GET --unix-socket /var/run/docker.sock http:/containers/$arg/json | jq '.State.Status' | tr -d "\""`
+
+cond1="running"
+cond2="stopped"
+cond3="rebooting"
+cond4="exited"
+
+if [ "$state" = "$cond1" ]; then
+        echo "OK - $state"
+        exit 0
+elif [ "$state" = "$cond2" ]; then
+        echo "CRITICAL - $state"
+        exit 2
+elif [ "$state" = "$cond4" ]; then
+        echo "CRITICAL - $state"
+        exit 2
+elif [ "$state" = "$cond3" ]; then
+        echo "UNKNOWN - $state"
+        exit 3
+fi
